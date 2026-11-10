@@ -1,6 +1,9 @@
 package com.sas.tv.feature.screensaver
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Typeface
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
@@ -8,6 +11,7 @@ import android.service.dreams.DreamService
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import org.json.JSONObject
@@ -30,6 +34,15 @@ class SasScreensaverDreamService : DreamService() {
     private var hijriView: TextView? = null
     private var cityView: TextView? = null
     private var rootView: FrameLayout? = null
+    private var backgroundImage: ImageView? = null
+    private var photoIndex = -1
+    private val photoFiles = listOf(
+        "backgrounds/9hWJs7iblh8.jpg",
+        "backgrounds/XDtzu1D2P8c.jpg",
+        "backgrounds/t3dlLOhdEzs.jpg",
+        "backgrounds/LAj90eAXOZA.jpg",
+        "backgrounds/f5ZB0LHwi0s.jpg"
+    )
     private var weatherView: TextView? = null
     private var prayerView: TextView? = null
     private var lastRefreshAt = 0L
@@ -64,6 +77,16 @@ class SasScreensaverDreamService : DreamService() {
                 palettes[paletteIndex]
             )
         }
+        val photoLayer = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
+        backgroundImage = photoLayer
+        root.addView(photoLayer, FrameLayout.LayoutParams(-1, -1))
+        val shade = View(this).apply {
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(0x99040B17.toInt(), 0xBB071321.toInt(), 0xCC030912.toInt())
+            )
+        }
+        root.addView(shade, FrameLayout.LayoutParams(-1, -1))
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -166,10 +189,32 @@ class SasScreensaverDreamService : DreamService() {
             }
         }
         paletteIndex = (paletteIndex + 1) % palettes.size
+        if (photoFiles.isNotEmpty()) {
+            photoIndex = (photoIndex + 1) % photoFiles.size
+            loadBackgroundPhoto(photoFiles[photoIndex])
+        }
         rootView?.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
             palettes[paletteIndex]
         )
+    }
+
+
+    private fun loadBackgroundPhoto(assetPath: String) {
+        executor.execute {
+            val bitmap = runCatching {
+                val options = BitmapFactory.Options().apply {
+                    inSampleSize = 2
+                    inPreferredConfig = Bitmap.Config.RGB_565
+                }
+                assets.open(assetPath).use { BitmapFactory.decodeStream(it, null, options) }
+            }.getOrNull()
+            handler.post {
+                if (bitmap != null) {
+                    backgroundImage?.setImageDrawable(BitmapDrawable(resources, bitmap))
+                }
+            }
+        }
     }
 
     private fun loadWeather(latitude: Double, longitude: Double): String? = runCatching {
