@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <application>
+        <activity
+            android:name=".ScreensaverSettingsActivity"
+            android:exported="true"
+            android:label="إعدادات شاشة SAS TV"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
+        <service
+            android:name=".SasScreensaverDreamService"
+            android:exported="true"
+            android:label="شاشة التوقف - SAS TV"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.dream"
+                android:resource="@xml/sas_dream_info" />
+        </service>
+    </application>
+</manifest>
