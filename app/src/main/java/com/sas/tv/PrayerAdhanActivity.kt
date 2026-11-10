@@ -71,7 +71,11 @@ class PrayerAdhanActivity : Activity() {
             val target=if(at.isAfter(now)) at else at.plusDays(1)
             val intent=Intent(this,PrayerAlertReceiver::class.java).putExtra("prayer",pair.first)
             val pi=PendingIntent.getBroadcast(this,100+index,intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,target.toInstant().toEpochMilli(),pi)
+            if (android.os.Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms()) {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,target.toInstant().toEpochMilli(),pi)
+            } else {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,target.toInstant().toEpochMilli(),pi)
+            }
         }
     }
     override fun onDestroy(){io.shutdownNow();super.onDestroy()}
