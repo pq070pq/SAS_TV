@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit
 class SasScreensaverDreamService : DreamService() {
     private val handler = Handler(Looper.getMainLooper())
     private val executor = Executors.newSingleThreadExecutor()
+    private val photoExecutor = Executors.newSingleThreadExecutor()
     private val zone = ZoneId.of("Asia/Riyadh")
     private var clockView: TextView? = null
     private var dateView: TextView? = null
@@ -139,6 +140,7 @@ class SasScreensaverDreamService : DreamService() {
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
         executor.shutdownNow()
+        photoExecutor.shutdownNow()
         super.onDestroy()
     }
 
@@ -201,7 +203,7 @@ class SasScreensaverDreamService : DreamService() {
 
 
     private fun loadBackgroundPhoto(assetPath: String) {
-        executor.execute {
+        photoExecutor.execute {
             val bitmap = runCatching {
                 val options = BitmapFactory.Options().apply {
                     inSampleSize = 2
