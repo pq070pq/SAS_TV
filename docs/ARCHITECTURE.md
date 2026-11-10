@@ -1,35 +1,15 @@
-# معمارية SAS-TV
+# Architecture
 
-## فصل التطبيقات
-1. **TV Launcher:** تطبيق Android مستقل للتلفزيون، يعلن HOME intent filter ويترك اختيار الشاشة الافتراضية للمستخدم.
-2. **Phone Companion:** تطبيق جوال اختياري للإعداد والربط والإدارة؛ لا تعتمد واجهة التلفزيون على تشغيله.
-3. **Core:** منطق مشترك قابل للاختبار، دون ربط مباشر بواجهات Android قدر الإمكان.
+## Single-package TV app
+SAS TV is one Android application and one installable APK. The current module is `app` with package `com.sas.tv`.
 
-## طبقات TV Launcher
-- Presentation: واجهة التلفزيون والتنقل بالريموت.
-- Domain: حالات الصفحة الرئيسية والمفضلة والتخطيط.
-- Data: إعدادات محلية وتخزين ومصادر بيانات خلف واجهات قابلة للاستبدال.
-- Platform: تكاملات Android محدودة ومحمية بفحوصات توافق.
+The app is launched explicitly from the TV's normal apps list through `LEANBACK_LAUNCHER` (and from a phone-style launcher through `LAUNCHER`). It intentionally has no `CATEGORY_HOME` filter. Therefore Android does not register it as a replacement Home app, and installation cannot change the manufacturer's default launcher.
 
-## الصفحة الرئيسية
-- الوقت والتاريخ وحالة الاتصال.
-- بطاقات محتوى اختيارية.
-- صف تطبيقات مفضلة قابل للتخصيص من 1 إلى 6.
-- اختصارات إعدادات النظام المسموح بها.
-- شريط معلومات اختياري يمكن إخفاؤه.
-- إعداد أولي واضح وقابل للتخطي حيثما أمكن.
+## UrTV reference
+The upstream UrTV project separates its home launcher and screensaver into distinct packages. SAS TV uses its user-facing TV-app approach as a reference, but the product requirement here is a single package. Do not import upstream installation scripts that switch the HOME role, disable the stock launcher, alter saved Wi-Fi, or require ADB/root.
 
-## الأداء والتوافق
-- واجهة خفيفة وتجنب الحركة المستمرة.
-- تحميل كسول للصور والقوائم.
-- لا مهام خلفية دائمة بلا حاجة.
-- اختبار الريموت أولًا ثم اللمس والماوس.
-- تحديد minSdk بعد حصر أجهزة الاختبار الفعلية.
-
-## مراحل التنفيذ
-1. تأسيس Gradle والوحدات والهوية.
-2. TV Launcher أولي يعمل دون شبكة.
-3. المفضلة والإعدادات والحفظ المحلي.
-4. الصلاة والطقس والأخبار بمصادر موثوقة وخيارات تعطيل.
-5. تطبيق الجوال المرافق عند الحاجة.
-6. اختبارات آلية وبناء APK واختبار فعلي على التلفزيون.
+## Constraints
+- No companion APK or screensaver APK is installed.
+- No package installer automation or privileged system modifications.
+- No removal/disablement of stock applications.
+- Optional online features must use explicit, documented data sources and graceful offline states.
