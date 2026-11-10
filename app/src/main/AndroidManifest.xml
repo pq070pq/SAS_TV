@@ -21,13 +21,18 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar"
         android:usesCleartextTraffic="false">
-        <!-- One installable app. It appears in the TV apps row but deliberately
-             does NOT declare CATEGORY_HOME, so installing it never replaces
-             the manufacturer's launcher or changes the default Home app. -->
+        <!-- SAS TV can be selected as the device Home app. Android still requires
+             the user/system Home-role selection; installation does not silently
+             disable or remove the manufacturer's launcher. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:screenOrientation="landscape">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
