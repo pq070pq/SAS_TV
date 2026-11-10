@@ -74,6 +74,7 @@ class ScreensaverSettingsActivity : Activity() {
                     .putString("city_title", selected.title)
                     .putString("latitude", selected.latitude.toString())
                     .putString("longitude", selected.longitude.toString())
+                    .putString("timezone", "Asia/Riyadh")
                     .apply()
                 finish()
             }
