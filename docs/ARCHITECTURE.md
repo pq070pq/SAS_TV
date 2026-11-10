@@ -1,15 +1,17 @@
 # Architecture
 
-## Single-package TV app
+## Single-package TV Home app
 SAS TV is one Android application and one installable APK. The current module is `app` with package `com.sas.tv`.
 
-The app is launched explicitly from the TV's normal apps list through `LEANBACK_LAUNCHER` (and from a phone-style launcher through `LAUNCHER`). It intentionally has no `CATEGORY_HOME` filter. Therefore Android does not register it as a replacement Home app, and installation cannot change the manufacturer's default launcher.
+The main activity declares `MAIN + HOME + DEFAULT`, allowing Android TV to offer SAS TV as a Home application. It also retains `LEANBACK_LAUNCHER` and `LAUNCHER` so it remains discoverable in app lists.
+
+Android/device policy may require the user to select SAS TV through the Home-app chooser or default-app settings. Installing the APK alone is not guaranteed to silently change the default Home app. The manufacturer's launcher must remain installed and enabled so the user can switch back.
 
 ## UrTV reference
-The upstream UrTV project separates its home launcher and screensaver into distinct packages. SAS TV uses its user-facing TV-app approach as a reference, but the product requirement here is a single package. Do not import upstream installation scripts that switch the HOME role, disable the stock launcher, alter saved Wi-Fi, or require ADB/root.
+The upstream UrTV project separates its home launcher and screensaver into distinct packages. SAS TV targets one installable package. Do not import upstream installation scripts that disable the stock launcher, alter saved Wi-Fi, or require ADB/root.
 
 ## Constraints
-- No companion APK or screensaver APK is installed.
+- One APK; no companion APK or separately installed screensaver package.
 - No package installer automation or privileged system modifications.
-- No removal/disablement of stock applications.
+- Never remove or disable stock applications.
 - Optional online features must use explicit, documented data sources and graceful offline states.
