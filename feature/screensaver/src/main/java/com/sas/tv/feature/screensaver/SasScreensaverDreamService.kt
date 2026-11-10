@@ -29,6 +29,7 @@ class SasScreensaverDreamService : DreamService() {
     private var dateView: TextView? = null
     private var hijriView: TextView? = null
     private var cityView: TextView? = null
+    private var rootView: FrameLayout? = null
     private var weatherView: TextView? = null
     private var prayerView: TextView? = null
     private var lastRefreshAt = 0L
@@ -90,6 +91,7 @@ class SasScreensaverDreamService : DreamService() {
                 Gravity.CENTER
             )
         )
+        rootView = root
         setContentView(root)
         updateClock()
     }
@@ -164,7 +166,7 @@ class SasScreensaverDreamService : DreamService() {
             }
         }
         paletteIndex = (paletteIndex + 1) % palettes.size
-        (window?.decorView as? FrameLayout)?.background = GradientDrawable(
+        rootView?.background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
             palettes[paletteIndex]
         )
