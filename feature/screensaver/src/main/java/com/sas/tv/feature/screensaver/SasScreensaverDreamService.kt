@@ -33,7 +33,11 @@ class SasScreensaverDreamService : DreamService() {
     private val handler = Handler(Looper.getMainLooper())
     private val executor = Executors.newSingleThreadExecutor()
     private val photoExecutor = Executors.newSingleThreadExecutor()
-    private val zone = ZoneId.of("Asia/Riyadh")
+    private fun currentZone(): ZoneId {
+        val configured = getSharedPreferences("sas_tv_screensaver", MODE_PRIVATE)
+            .getString("timezone", "Asia/Riyadh") ?: "Asia/Riyadh"
+        return runCatching { ZoneId.of(configured) }.getOrDefault(ZoneId.of("Asia/Riyadh"))
+    }
     private var clockView: TextView? = null
     private var dateView: TextView? = null
     private var hijriView: TextView? = null
@@ -170,12 +174,12 @@ class SasScreensaverDreamService : DreamService() {
         ).apply { topMargin = top }
 
     private fun updateClock() {
-        val now = Instant.now().atZone(zone)
+        val now = Instant.now().atZone(currentZone())
         val locale = Locale("ar", "SA")
         clockView?.text = DateTimeFormatter.ofPattern("hh:mm:ss a", locale).format(now)
         dateView?.text = DateTimeFormatter.ofPattern("EEEE، d MMMM yyyy", locale).format(now)
         hijriView?.text = DateTimeFormatter.ofPattern("d MMMM yyyy هـ", locale)
-            .withChronology(HijrahDate.now(zone).chronology)
+            .withChronology(HijrahDate.now(currentZone()).chronology)
             .format(now)
         val prefs = getSharedPreferences("sas_tv_screensaver", MODE_PRIVATE)
         cityView?.text = "بتوقيت ${prefs.getString("city_title", "الرياض") ?: "الرياض"}"
@@ -229,7 +233,7 @@ class SasScreensaverDreamService : DreamService() {
 
     private fun loadWeather(latitude: Double, longitude: Double): String? = runCatching {
         val url = URL(
-            "https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude&current=temperature_2m,weather_code&timezone=Asia%2FRiyadh"
+            "https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude&current=temperature_2m,weather_code&timezone=${java.net.URLEncoder.encode(currentZone().id, "UTF-8")}"
         )
         val json = requestJson(url)
         val current = json.getJSONObject("current")
@@ -245,10 +249,10 @@ class SasScreensaverDreamService : DreamService() {
         val timings = requestJson(url).getJSONObject("data").getJSONObject("timings")
         val names = listOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")
         val labels = listOf("الفجر", "الظهر", "العصر", "المغرب", "العشاء")
-        val today = LocalDate.now(zone)
+        val today = LocalDate.now(currentZone())
         val schedule = names.indices.map { i ->
             val raw = timings.getString(names[i]).take(5)
-            labels[i] to today.atTime(LocalTime.parse(raw)).atZone(zone)
+            labels[i] to today.atTime(LocalTime.parse(raw)).atZone(currentZone())
         }
         val display = schedule.joinToString("   •   ") { (label, at) ->
             "$label ${at.format(DateTimeFormatter.ofPattern("h:mm", Locale("ar", "SA")))}"
@@ -257,7 +261,7 @@ class SasScreensaverDreamService : DreamService() {
     }.getOrNull()
 
     private fun updatePrayerPanel() {
-        val now = ZonedDateTime.now(zone)
+        val now = ZonedDateTime.now(currentZone())
         val next = prayerSchedule.firstOrNull { it.second.isAfter(now) }
         val target = next ?: prayerSchedule.firstOrNull()?.let { (label, at) -> label to at.plusDays(1) }
         if (target == null) return
