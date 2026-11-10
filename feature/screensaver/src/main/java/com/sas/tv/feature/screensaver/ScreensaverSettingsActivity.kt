@@ -1,6 +1,7 @@
 package com.sas.tv.feature.screensaver
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.ArrayAdapter
@@ -77,10 +78,19 @@ class ScreensaverSettingsActivity : Activity() {
                 finish()
             }
         }
+        val activate = Button(this).apply {
+            text = "فتح إعدادات شاشة التوقف في التلفزيون"
+            setOnClickListener {
+                val dreamSettings = Intent("android.settings.DREAM_SETTINGS")
+                runCatching { startActivity(dreamSettings) }
+                    .onFailure { startActivity(Intent(android.provider.Settings.ACTION_DISPLAY_SETTINGS)) }
+            }
+        }
         root.addView(title, LinearLayout.LayoutParams(-1, -2))
         root.addView(description, LinearLayout.LayoutParams(-1, -2))
         root.addView(spinner, LinearLayout.LayoutParams(-1, -2))
         root.addView(save, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 20 })
+        root.addView(activate, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 12 })
         setContentView(root)
     }
 }
