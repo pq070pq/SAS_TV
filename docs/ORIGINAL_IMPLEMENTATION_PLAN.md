@@ -1,4 +1,4 @@
-# SAS TV — Original UrTV-inspired implementation plan
+# SAS TV — Implementation Plan
 
 ## Product decision
 Implement an original SAS TV product with functional parity to the user-facing UrTV experience. Do not copy unlicensed source files, artwork, fonts, recordings, or bundled data. Reuse only components whose license clearly covers the exact files and preserve required notices. Recreate all other behavior independently.
