@@ -17,8 +17,12 @@ import android.widget.TextView
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.chrono.HijrahDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -46,6 +50,7 @@ class SasScreensaverDreamService : DreamService() {
     )
     private var weatherView: TextView? = null
     private var prayerView: TextView? = null
+    private var prayerSchedule: List<Pair<String, ZonedDateTime>> = emptyList()
     private var lastRefreshAt = 0L
     private var paletteIndex = 0
 
@@ -59,6 +64,7 @@ class SasScreensaverDreamService : DreamService() {
     private val tick = object : Runnable {
         override fun run() {
             updateClock()
+            updatePrayerPanel()
             if (System.currentTimeMillis() - lastRefreshAt >= TimeUnit.MINUTES.toMillis(30)) {
                 refreshInformation()
             }
@@ -187,7 +193,9 @@ class SasScreensaverDreamService : DreamService() {
             val prayers = loadPrayerTimes(city, country)
             handler.post {
                 weatherView?.text = weather ?: "الطقس غير متاح حاليًا"
-                prayerView?.text = prayers ?: "مواقيت الصلاة غير متاحة حاليًا"
+                prayerSchedule = prayers?.second.orEmpty()
+                prayerView?.text = prayers?.first ?: "مواقيت الصلاة غير متاحة حاليًا"
+                updatePrayerPanel()
             }
         }
         paletteIndex = (paletteIndex + 1) % palettes.size
@@ -230,19 +238,35 @@ class SasScreensaverDreamService : DreamService() {
         "الطقس: ${"%.0f".format(Locale.US, temp)}° م • ${weatherDescription(code)}"
     }.getOrNull()
 
-    private fun loadPrayerTimes(city: String, country: String): String? = runCatching {
+    private fun loadPrayerTimes(city: String, country: String): Pair<String, List<Pair<String, ZonedDateTime>>>? = runCatching {
         val url = URL(
             "https://api.aladhan.com/v1/timingsByCity?city=${java.net.URLEncoder.encode(city, "UTF-8")}&country=${java.net.URLEncoder.encode(country, "UTF-8")}&method=4"
         )
         val timings = requestJson(url).getJSONObject("data").getJSONObject("timings")
-        val locale = Locale("ar", "SA")
         val names = listOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")
         val labels = listOf("الفجر", "الظهر", "العصر", "المغرب", "العشاء")
-        labels.indices.joinToString("   •   ") { i ->
-            val raw = timings.getString(names[i]).substringBefore(" ")
-            "${labels[i]} $raw"
+        val today = LocalDate.now(zone)
+        val schedule = names.indices.map { i ->
+            val raw = timings.getString(names[i]).take(5)
+            labels[i] to today.atTime(LocalTime.parse(raw)).atZone(zone)
         }
+        val display = schedule.joinToString("   •   ") { (label, at) ->
+            "$label ${at.format(DateTimeFormatter.ofPattern("h:mm", Locale("ar", "SA")))}"
+        }
+        display to schedule
     }.getOrNull()
+
+    private fun updatePrayerPanel() {
+        val now = ZonedDateTime.now(zone)
+        val next = prayerSchedule.firstOrNull { it.second.isAfter(now) }
+        val target = next ?: prayerSchedule.firstOrNull()?.let { (label, at) -> label to at.plusDays(1) }
+        if (target == null) return
+        val remaining = Duration.between(now, target.second).coerceAtLeast(Duration.ZERO)
+        val hours = remaining.toHours()
+        val minutes = remaining.toMinutes() % 60
+        val countdown = if (hours > 0) "باقي $hours س و $minutes د" else "باقي $minutes د"
+        prayerView?.text = "الصلاة القادمة: ${target.first} • $countdown"
+    }
 
     private fun requestJson(url: URL): JSONObject {
         val connection = (url.openConnection() as HttpURLConnection).apply {
