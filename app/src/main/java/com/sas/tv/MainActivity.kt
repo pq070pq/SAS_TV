@@ -102,8 +102,14 @@ private fun SasTvHome() {
                 } else {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         items(shown, key = { it.packageName }) { app ->
-                            AppTile(app, focused == app.packageName, { focused = app.packageName }) {
+                            AppTile(app, focused == app.packageName, { focused = app.packageName }, {
                                 Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setClassName(app.packageName, app.className).let(context::startActivity)
+                            }) {
+                                val updated = favoritePackages.toMutableSet()
+                                if (app.packageName in updated) updated.remove(app.packageName)
+                                else if (updated.size < 6) updated.add(app.packageName)
+                                favoritePackages = updated
+                                preferences.edit().putStringSet("favorite_packages", updated).apply()
                             }
                         }
                     }
