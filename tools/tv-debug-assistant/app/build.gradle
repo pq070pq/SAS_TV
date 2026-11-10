@@ -1,0 +1,15 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+android {
+    namespace 'com.tvdebugassistant'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'com.tvdebugassistant'
+        minSdk 23
+        targetSdk 28
+        versionCode 1
+        versionName '0.1'
+    }
+}
