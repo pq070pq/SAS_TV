@@ -37,13 +37,14 @@ class ServicesActivity : Activity() {
         status = TextView(this).apply { text="اختر الخدمة"; textSize=15f; setTextColor(white); gravity=Gravity.CENTER; setPadding(0,10,0,16) }
         root.addView(status)
         val tabs = LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER }
-        listOf("القرآن","الإذاعات","المباريات","الأسواق","المهام").forEach { label ->
+        listOf("القرآن","الإذاعات","المباريات","الأسواق","المهام","الصلاة").forEach { label ->
             tabs.addView(button(label) { when(label) {
                 "القرآن" -> loadReciters()
                 "الإذاعات" -> loadRadios()
                 "المباريات" -> loadMatches()
                 "الأسواق" -> showMarkets()
-                else -> showTasks()
+                "المهام" -> showTasks()
+                else -> startActivity(Intent(this, PrayerAdhanActivity::class.java))
             } }, LinearLayout.LayoutParams(0,58,1f).apply { setMargins(4,4,4,4) })
         }
         root.addView(tabs)
