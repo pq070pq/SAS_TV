@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
@@ -23,6 +24,7 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar"
         android:usesCleartextTraffic="false">
+        <service android:name=".PrayerAdhanService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
         <activity android:name=".PrayerAdhanActivity" android:exported="false" android:screenOrientation="landscape" />
         <receiver android:name=".PrayerAlertReceiver" android:exported="false" />
         <receiver android:name=".PrayerBootReceiver" android:enabled="true" android:exported="true">
