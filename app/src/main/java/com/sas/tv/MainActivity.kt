@@ -2,6 +2,9 @@ package com.sas.tv
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -18,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.foundation.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -27,6 +31,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
@@ -38,12 +45,28 @@ import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 private val Night = Color(0xFF071321)
 private val Panel = Color(0xFF102438)
 private val Mint = Color(0xFF00D6C8)
 
-private data class TvApp(val label: String, val packageName: String, val className: String)
+private data class TvApp(
+    val label: String,
+    val packageName: String,
+    val className: String,
+    val icon: ImageBitmap?
+)
+
+private fun drawableToImageBitmap(drawable: Drawable): ImageBitmap? = runCatching {
+    val width = drawable.intrinsicWidth.coerceIn(1, 128)
+    val height = drawable.intrinsicHeight.coerceIn(1, 128)
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    drawable.setBounds(0, 0, width, height)
+    drawable.draw(canvas)
+    bitmap.asImageBitmap()
+}.getOrNull()
 
 class MainActivity : ComponentActivity() {
     @Suppress("DEPRECATION")
@@ -73,14 +96,14 @@ private fun SasTvHome() {
         intents.flatMap { intent ->
             @Suppress("DEPRECATION")
             pm.queryIntentActivities(intent, PackageManager.MATCH_ALL).map {
-                TvApp(it.loadLabel(pm).toString(), it.activityInfo.packageName, it.activityInfo.name)
+                TvApp(it.loadLabel(pm).toString(), it.activityInfo.packageName, it.activityInfo.name, runCatching { drawableToImageBitmap(it.loadIcon(pm)) }.getOrNull())
             }
         }.filter { it.packageName != context.packageName }
             .distinctBy { it.packageName }
             .sortedBy { it.label.lowercase(Locale.getDefault()) }
     }
     LaunchedEffect(Unit) {
-        while (true) { now = Date(); delay(30_000) }
+        while (true) { now = Date(); delay(1_000) }
     }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(
@@ -95,8 +118,8 @@ private fun SasTvHome() {
                         Text("شاشتك.. بطريقتك", color = Color.White.copy(alpha = .72f), fontSize = 13.sp)
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text(SimpleDateFormat("hh:mm a", Locale("ar")).format(now), color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Light)
-                        Text(SimpleDateFormat("EEEE، d MMMM yyyy", Locale("ar")).format(now), color = Color.White.copy(alpha = .65f), fontSize = 13.sp)
+                        Text(SimpleDateFormat("hh:mm:ss a", Locale("ar", "SA")).apply { timeZone = TimeZone.getTimeZone("Asia/Riyadh") }.format(now), color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.SemiBold)
+                        Text(SimpleDateFormat("EEEE، d MMMM yyyy", Locale("ar", "SA")).apply { timeZone = TimeZone.getTimeZone("Asia/Riyadh") }.format(now), color = Color.White.copy(alpha = .82f), fontSize = 15.sp)
                     }
                 }
                 Spacer(Modifier.height(38.dp))
@@ -152,7 +175,16 @@ private fun AppTile(app: TvApp, selected: Boolean, onFocus: () -> Unit, onClick:
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(app.label.take(2), color = Mint, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+        if (app.icon != null) {
+            Image(
+                bitmap = app.icon,
+                contentDescription = app.label,
+                modifier = Modifier.size(48.dp),
+                contentScale = ContentScale.Fit
+            )
+        } else {
+            Text(app.label.take(2), color = Mint, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+        }
         Spacer(Modifier.height(8.dp))
         Text(app.label, color = Color.White, fontSize = 13.sp, maxLines = 2)
     }
