@@ -38,7 +38,9 @@ class PrayerBootReceiver : BroadcastReceiver() {
                 val today = LocalDate.now(zone)
                 val alarm = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
                 listOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha").forEachIndexed { index, key ->
-                    val time = timings.getString(key).take(5).split(":")
+                    val rawTime = timings.getString(key).take(5)
+                    prefs.edit().putString("time_" + listOf("الفجر", "الظهر", "العصر", "المغرب", "العشاء")[index], rawTime).apply()
+                    val time = rawTime.split(":")
                     val at = today.atTime(time[0].toInt(), time[1].toInt()).atZone(zone)
                     val target = if (at.isAfter(ZonedDateTime.now(zone))) at else at.plusDays(1)
                     val names = listOf("الفجر", "الظهر", "العصر", "المغرب", "العشاء")
