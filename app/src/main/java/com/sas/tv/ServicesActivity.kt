@@ -115,8 +115,8 @@ class ServicesActivity : Activity() {
             for(i in 0 until events.length()) {
                 val e=events.getJSONObject(i); val comp=e.optJSONArray("competitions")?.optJSONObject(0)
                 val competitors=comp?.optJSONArray("competitors")
-                val home=competitors?.optJSONObject(0)?.optString("team")?.let { it } 
-                val away=competitors?.optJSONObject(1)?.optString("team")?.let { it }
+                val home=competitors?.optJSONObject(0)?.optJSONObject("team")
+                val away=competitors?.optJSONObject(1)?.optJSONObject("team")
                 val h=home?.optString("displayName") ?: "الفريق الأول"
                 val a=away?.optString("displayName") ?: "الفريق الثاني"
                 val state=comp?.optJSONObject("status")?.optJSONObject("type")?.optString("detail") ?: e.optString("date")
