@@ -265,7 +265,10 @@ class SasScreensaverDreamService : DreamService() {
         val hours = remaining.toHours()
         val minutes = remaining.toMinutes() % 60
         val countdown = if (hours > 0) "باقي $hours س و $minutes د" else "باقي $minutes د"
-        prayerView?.text = "الصلاة القادمة: ${target.first} • $countdown"
+        val allTimes = prayerSchedule.joinToString("   •   ") { (label, at) ->
+            "$label ${at.format(DateTimeFormatter.ofPattern("h:mm", Locale("ar", "SA")))}"
+        }
+        prayerView?.text = "$allTimes\nالصلاة القادمة: ${target.first} • $countdown"
     }
 
     private fun requestJson(url: URL): JSONObject {
