@@ -2,6 +2,7 @@ package com.tvdebugassistant
 
 import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -16,14 +17,7 @@ import android.widget.Toast
 class MainActivity : Activity() {
     private lateinit var report: TextView
 
-    private val developerRoutes = listOf(
-        "صفحة خيارات المطوّر الرسمية" to Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS),
-        "إعدادات المطوّر البديلة" to Intent("android.settings.APPLICATION_DEVELOPMENT_SETTINGS"),
-        "صفحة إعدادات النظام" to Intent(Settings.ACTION_SETTINGS),
-        "معلومات الجهاز" to Intent(Settings.ACTION_DEVICE_INFO_SETTINGS),
-        "إعدادات الأمان" to Intent(Settings.ACTION_SECURITY_SETTINGS),
-        "إعدادات النظام العامة" to Intent("android.settings.SETTINGS")
-    )
+    private data class Route(val label: String, val intent: Intent)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,12 +28,12 @@ class MainActivity : Activity() {
             setBackgroundColor(0xFF101820.toInt())
         }
         layout.addView(TextView(this).apply {
-            text = "TV Debug Assistant 0.3"
+            text = "TV Debug Assistant 0.4"
             textSize = 26f; gravity = Gravity.CENTER
             setTextColor(0xFFFFFFFF.toInt()); setPadding(0, 0, 0, pad)
         })
         layout.addView(TextView(this).apply {
-            text = "مساعد تشخيص خيارات المطوّر وتصحيح USB"
+            text = "مساعد ذكي لاكتشاف صفحة المطوّر وتصحيح USB"
             textSize = 18f; gravity = Gravity.CENTER
             setTextColor(0xFFB8C7D1.toInt()); setPadding(0, 0, 0, pad)
         })
@@ -48,19 +42,19 @@ class MainActivity : Activity() {
             setPadding(0, pad, 0, pad); text = deviceReport()
         }
         layout.addView(report)
-        layout.addView(makeButton("فتح خيارات المطوّر") {
-            openDeveloperSettings()
+        layout.addView(makeButton("اكتشاف وفتح خيارات المطوّر تلقائيًا") {
+            detectAndOpenDeveloperSettings()
         })
         layout.addView(makeButton("فتح إعدادات النظام") {
             openPage(Intent(Settings.ACTION_SETTINGS))
         })
         layout.addView(makeButton("تحديث معلومات الجهاز") { report.text = deviceReport() })
         layout.addView(TextView(this).apply {
-            text = "\nطريقة الاستخدام: ضغطة واحدة على «فتح خيارات المطوّر». سيجرب التطبيق تلقائيًا حتى 6 مسارات نظام بالترتيب، ويبدأ بصفحة المطوّر الأصلية."
+            text = "\nضغطة واحدة: يفحص مسارات إعدادات المطوّر المعروفة، ثم يفتح أول صفحة مطوّر يسمح بها النظام."
             textSize = 15f; setTextColor(0xFFFFD180.toInt()); setPadding(0, pad, 0, 0)
         })
         layout.addView(TextView(this).apply {
-            text = "\nتنبيه: هذه محاولات فتح لصفحات Android الرسمية فقط. إذا منع النظام صفحة المطوّر بصلاحية محمية، لا يمكن لتطبيق عادي تجاوز المنع أو تفعيل ADB بنفسه."
+            text = "\nلا يوجد في Android رابط عام مضمون يفتح مفتاح USB Debugging مباشرة. تفعيل المفتاح يحتاج موافقة المستخدم داخل إعدادات النظام، ولا يمكن لتطبيق عادي النقر عليه أو تجاوز منع الشركة."
             textSize = 14f; setTextColor(0xFFB8C7D1.toInt()); setPadding(0, pad, 0, 0)
         })
         setContentView(ScrollView(this).apply { addView(layout) })
@@ -71,29 +65,38 @@ class MainActivity : Activity() {
         setOnClickListener { action() }
     }
 
-    private fun openDeveloperSettings() {
-        val failures = mutableListOf<String>()
-        for ((name, intent) in developerRoutes) {
+    private fun detectAndOpenDeveloperSettings() {
+        val routes = listOf(
+            Route("إعدادات المطوّر الرسمية", Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)),
+            Route("إعدادات المطوّر البديلة", Intent("android.settings.DEVELOPMENT_SETTINGS")),
+            Route("إعدادات المطوّر البديلة للشركة", Intent("android.settings.APPLICATION_DEVELOPMENT_SETTINGS"))
+        )
+        val checked = mutableListOf<String>()
+        for (route in routes) {
             try {
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                if (intent.resolveActivity(packageManager) == null) {
-                    failures.add("$name: غير موجود")
+                val resolved = packageManager.resolveActivity(route.intent, 0)
+                if (resolved == null) {
+                    checked.add(route.label + ": غير موجود")
                     continue
                 }
-                report.text = deviceReport() + "\n\nتم العثور على المسار: $name\nجارٍ فتحه..."
-                startActivity(intent)
-                Toast.makeText(this, "تم إرسال طلب فتح: $name", Toast.LENGTH_LONG).show()
+                report.text = deviceReport() + "\n\nتم اكتشاف: " + route.label +
+                    "\nالوجهة: " + (resolved.activityInfo?.packageName ?: "غير معروفة") +
+                    "\nجارٍ فتح صفحة المطوّر..."
+                startActivity(route.intent)
+                Toast.makeText(this, "تم العثور على صفحة المطوّر وطلب فتحها", Toast.LENGTH_LONG).show()
                 return
-            } catch (e: SecurityException) {
-                failures.add("$name: رفض النظام الصلاحية")
-            } catch (e: ActivityNotFoundException) {
-                failures.add("$name: الصفحة غير متاحة")
-            } catch (e: Exception) {
-                failures.add("$name: تعذر الفتح")
+            } catch (_: SecurityException) {
+                checked.add(route.label + ": منع النظام الوصول")
+            } catch (_: ActivityNotFoundException) {
+                checked.add(route.label + ": غير متاحة")
+            } catch (_: Exception) {
+                checked.add(route.label + ": تعذر الفتح")
             }
         }
-        report.text = deviceReport() + "\n\nلم ينجح أي مسار:\n" + failures.joinToString("\n")
-        Toast.makeText(this, "النظام منع جميع مسارات الإعدادات التي جُرّبت", Toast.LENGTH_LONG).show()
+        report.text = deviceReport() + "\n\nلم يعثر التطبيق على صفحة مطوّر قابلة للفتح.\n" +
+            checked.joinToString("\n") +
+            "\n\nهذا يعني أن الشركة قد أخفت الصفحة أو منعت الوصول إليها."
+        Toast.makeText(this, "لم يسمح النظام بفتح خيارات المطوّر", Toast.LENGTH_LONG).show()
     }
 
     private fun openPage(intent: Intent) {
@@ -112,5 +115,5 @@ class MainActivity : Activity() {
         "الجهاز: ${Build.DEVICE}\n" +
         "إصدار Android: ${Build.VERSION.RELEASE}\n" +
         "مستوى API: ${Build.VERSION.SDK_INT}\n\n" +
-        "حالة ADB: لا يمكن لتطبيق عادي قراءتها بدقة دون صلاحيات نظام."
+        "حالة USB Debugging: لا يمكن لتطبيق عادي قراءتها أو تغييرها بدقة دون صلاحية نظام."
 }
