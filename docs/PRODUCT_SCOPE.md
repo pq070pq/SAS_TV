@@ -1,4 +1,4 @@
-# SAS TV — Product scope inspired by UrTV
+# SAS TV — Product Scope
 
 ## Product goal
 Build SAS TV as a complete Arabic-first Android TV experience, using UrTV as a functional reference while retaining SAS branding, a single installable APK, and safe opt-in device behavior.
