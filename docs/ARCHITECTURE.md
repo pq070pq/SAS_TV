@@ -1,17 +1,29 @@
 # Architecture
 
-## Single-package TV Home app
-SAS TV is one Android application and one installable APK. The current module is `app` with package `com.sas.tv`.
+## Single-package TV app
+SAS TV remains **one Android application and one installable APK** with package `com.sas.tv`.
+Gradle separates implementation into:
+- `:app`: the existing SAS TV launcher, installed-app discovery, real app icons, favorites, clock, and system shortcuts.
+- `:feature:screensaver`: an Android library module that contributes an Android `DreamService`, city settings, clock/date view, and optional live data.
 
-The main activity declares `MAIN + HOME + DEFAULT`, allowing Android TV to offer SAS TV as a Home application. It also retains `LEANBACK_LAUNCHER` and `LAUNCHER` so it remains discoverable in app lists.
+The screensaver library is merged into the `:app` manifest and APK at build time. It does not create a second package, companion APK, or separate installer flow.
 
-Android/device policy may require the user to select SAS TV through the Home-app chooser or default-app settings. Installing the APK alone is not guaranteed to silently change the default Home app. The manufacturer's launcher must remain installed and enabled so the user can switch back.
+The main activity retains `MAIN + HOME + DEFAULT` so Android can offer SAS TV as a Home app. It also retains `LEANBACK_LAUNCHER` and `LAUNCHER`. Android still controls the user's choice; no silent Home change is performed, and the manufacturer's launcher is never disabled or removed.
 
-## UrTV reference
-The upstream UrTV project separates its home launcher and screensaver into distinct packages. SAS TV targets one installable package. Do not import upstream installation scripts that disable the stock launcher, alter saved Wi-Fi, or require ADB/root.
+## UrTV reference and clean-room boundary
+The upstream [tshi-dev/UrTV](https://github.com/tshi-dev/UrTV) repository was reviewed as a functional reference. Its project root does not include a general LICENSE file; the MIT notice at `android/launcher/LICENSE-tv-home` is scoped to the upstream launcher origin and does not license every UrTV addition or the screensaver implementation. SAS TV therefore does not copy UrTV application source, compiled APKs, or proprietary fonts. The bundled five landscape photographs are separately identified in [PHOTO-CREDITS.md](PHOTO-CREDITS.md) and sourced under the Unsplash License.
+
+## Screensaver behavior
+- The Android system starts the service as a normal DreamService when the user enables it.
+- A local settings screen lets the user choose a supported Saudi city.
+- The clock refreshes every second and shows Gregorian and Hijri dates using the Riyadh time zone.
+- Weather comes from Open-Meteo; prayer times come from Aladhan (Umm al-Qura method).
+- When data is unavailable, the screen says so rather than inventing values.
+- Background photos are decoded at reduced size and rotated on a 30-minute refresh interval to limit memory use.
 
 ## Constraints
-- One APK; no companion APK or separately installed screensaver package.
-- No package installer automation or privileged system modifications.
+- One installable APK; no separate screensaver or phone companion package.
+- No root, ADB setup, privileged package changes, or package installer automation.
 - Never remove or disable stock applications.
-- Optional online features must use explicit, documented data sources and graceful offline states.
+- Optional online features must have clear sources and graceful offline states.
+- Device behavior is not called tested until checked on a physical TV.
