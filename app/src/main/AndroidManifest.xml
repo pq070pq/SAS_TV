@@ -27,6 +27,15 @@
              the user/system Home-role selection; installation does not silently
              disable or remove the manufacturer's launcher. -->
         <activity
+        <activity android:name=".PrayerAdhanActivity" android:exported="false" android:screenOrientation="landscape" />
+        <receiver android:name=".PrayerAlertReceiver" android:exported="false" />
+        <receiver android:name=".PrayerBootReceiver" android:enabled="true" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
             android:name=".MainActivity"
             android:exported="true"
             android:screenOrientation="landscape">
