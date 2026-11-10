@@ -63,6 +63,7 @@ class PrayerAdhanActivity : Activity() {
     }
     private fun scheduleAlerts(times:List<Pair<String,String>>) {
         val am=getSystemService(ALARM_SERVICE) as AlarmManager
+        times.filter { it.first != "الشروق" }.forEach { (name, time) -> prefs.edit().putString("time_" + name, time).apply() }
         val zone=ZoneId.of("Asia/Riyadh")
         val now=ZonedDateTime.now(zone)
         times.filter{it.first!="الشروق"}.forEachIndexed{index,pair->
@@ -84,10 +85,33 @@ class PrayerAdhanActivity : Activity() {
 class PrayerAlertReceiver:BroadcastReceiver(){
     override fun onReceive(context:Context,intent:Intent){
         val nm=context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channel="sas_prayer_alerts"
-        if(android.os.Build.VERSION.SDK_INT>=26) nm.createNotificationChannel(NotificationChannel(channel,"تنبيهات الصلاة",NotificationManager.IMPORTANCE_HIGH))
+        val channel="sas_prayer_alerts_v2"
+        val alarmSound=android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
+        if(android.os.Build.VERSION.SDK_INT>=26) {
+            val audio=android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_ALARM).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
+            val notificationChannel=NotificationChannel(channel,"أذان وتنبيهات الصلاة",NotificationManager.IMPORTANCE_HIGH)
+            notificationChannel.setSound(alarmSound,audio)
+            nm.createNotificationChannel(notificationChannel)
+        }
         val prayer=intent.getStringExtra("prayer") ?: "الصلاة"
-        val notification=Notification.Builder(context,channel).setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle("حان وقت "+prayer).setContentText("تنبيه الصلاة من SAS TV").setAutoCancel(true).build()
+        val notification=Notification.Builder(context,channel).setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setCategory(Notification.CATEGORY_ALARM).setPriority(Notification.PRIORITY_MAX).setContentTitle("حان وقت "+prayer).setContentText("تنبيه الصلاة من SAS TV").setAutoCancel(true).build()
         nm.notify(prayer.hashCode(),notification)
+        val prefs=context.getSharedPreferences("sas_tv_adhan",Context.MODE_PRIVATE)
+        if(prefs.getBoolean("enabled",false)) {
+            val time=prefs.getString("time_"+prayer,null)
+            if(time!=null) {
+                val parts=time.split(":")
+                val zone=java.time.ZoneId.of("Asia/Riyadh")
+                val next=java.time.LocalDate.now(zone).plusDays(1).atTime(parts[0].toInt(),parts[1].toInt()).atZone(zone)
+                val alarm=context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                val index=listOf("الفجر","الظهر","العصر","المغرب","العشاء").indexOf(prayer)
+                if(index>=0) {
+                    val nextIntent=Intent(context,PrayerAlertReceiver::class.java).putExtra("prayer",prayer)
+                    val pi=PendingIntent.getBroadcast(context,100+index,nextIntent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+                    if(android.os.Build.VERSION.SDK_INT<31 || alarm.canScheduleExactAlarms()) alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,next.toInstant().toEpochMilli(),pi)
+                    else alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,next.toInstant().toEpochMilli(),pi)
+                }
+            }
+        }
     }
 }
