@@ -21,8 +21,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.foundation.Image
 import androidx.compose.material3.Icon
+import com.sas.tv.feature.screensaver.ScreensaverSettingsActivity
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -154,6 +156,9 @@ private fun SasTvHome() {
                     }
                     ActionTile("الشبكة", Icons.Default.Wifi) {
                         context.startActivity(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                    ActionTile("شاشة التوقف", Icons.Default.AccessTime) {
+                        context.startActivity(Intent(context, ScreensaverSettingsActivity::class.java))
                     }
                 }
                 Spacer(Modifier.weight(1f))
