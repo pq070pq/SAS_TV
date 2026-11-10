@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <queries>
@@ -21,9 +24,16 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar"
         android:usesCleartextTraffic="false">
-        <!-- SAS TV can be selected as the device Home app. Android still requires
-             the user/system Home-role selection; installation does not silently
-             disable or remove the manufacturer's launcher. -->
+        <service android:name=".PrayerAdhanService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
+        <activity android:name=".PrayerAdhanActivity" android:exported="false" android:screenOrientation="landscape" />
+        <receiver android:name=".PrayerAlertReceiver" android:exported="false" />
+        <receiver android:name=".PrayerBootReceiver" android:enabled="true" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -160,6 +160,9 @@ private fun SasTvHome() {
                     ActionTile("شاشة التوقف", Icons.Default.AccessTime) {
                         context.startActivity(Intent(context, ScreensaverSettingsActivity::class.java))
                     }
+                    ActionTile("الخدمات", Icons.Default.Apps) {
+                        context.startActivity(Intent(context, ServicesActivity::class.java))
+                    }
                 }
                 Spacer(Modifier.weight(1f))
                 Text("واجهة خفيفة • تحكم بالريموت • خصوصيتك أولاً", color = Color.White.copy(alpha = .42f), fontSize = 12.sp)
