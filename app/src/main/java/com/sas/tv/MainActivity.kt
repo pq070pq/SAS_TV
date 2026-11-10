@@ -6,6 +6,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
@@ -58,6 +60,10 @@ private fun SasTvHome() {
     var now by remember { mutableStateOf(Date()) }
     var showAll by remember { mutableStateOf(false) }
     var focused by remember { mutableStateOf("") }
+    val preferences = remember { context.getSharedPreferences("sas_tv_preferences", android.content.Context.MODE_PRIVATE) }
+    var favoritePackages by remember {
+        mutableStateOf(preferences.getStringSet("favorite_packages", emptySet())?.toSet() ?: emptySet())
+    }
     val apps = remember {
         val pm = context.packageManager
         val intents = listOf(
@@ -96,7 +102,10 @@ private fun SasTvHome() {
                 Spacer(Modifier.height(38.dp))
                 Text(if (showAll) "كل التطبيقات" else "تطبيقاتك", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(18.dp))
-                val shown = if (showAll) apps else apps.take(6)
+                val shown = if (showAll) apps else {
+                    val favorites = apps.filter { it.packageName in favoritePackages }
+                    if (favorites.isEmpty()) apps.take(6) else favorites
+                }
                 if (shown.isEmpty()) {
                     Text("لم يتم العثور على تطبيقات بعد", color = Color.White.copy(alpha = .7f))
                 } else {
@@ -104,13 +113,13 @@ private fun SasTvHome() {
                         items(shown, key = { it.packageName }) { app ->
                             AppTile(app, focused == app.packageName, { focused = app.packageName }, {
                                 Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setClassName(app.packageName, app.className).let(context::startActivity)
-                            }) {
+                            }, {
                                 val updated = favoritePackages.toMutableSet()
                                 if (app.packageName in updated) updated.remove(app.packageName)
                                 else if (updated.size < 6) updated.add(app.packageName)
                                 favoritePackages = updated
                                 preferences.edit().putStringSet("favorite_packages", updated).apply()
-                            }
+                            })
                         }
                     }
                 }
@@ -131,14 +140,15 @@ private fun SasTvHome() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AppTile(app: TvApp, selected: Boolean, onFocus: () -> Unit, onClick: () -> Unit) {
+private fun AppTile(app: TvApp, selected: Boolean, onFocus: () -> Unit, onClick: () -> Unit, onLongClick: () -> Unit) {
     var hasFocus by remember { mutableStateOf(false) }
     Column(
         Modifier.width(142.dp).height(116.dp).clip(RoundedCornerShape(18.dp))
             .background(if (hasFocus || selected) Color(0xFF1A5260) else Panel)
             .onFocusChanged { hasFocus = it.isFocused; if (it.isFocused) onFocus() }
-            .clickable(onClick = onClick).focusable().padding(14.dp),
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick).focusable().padding(14.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
