@@ -41,7 +41,7 @@ private val Night = Color(0xFF071321)
 private val Panel = Color(0xFF102438)
 private val Mint = Color(0xFF00D6C8)
 
-private data class TvApp(val label: String, val packageName: String)
+private data class TvApp(val label: String, val packageName: String, val className: String)
 
 class MainActivity : ComponentActivity() {
     @Suppress("DEPRECATION")
@@ -67,7 +67,7 @@ private fun SasTvHome() {
         intents.flatMap { intent ->
             @Suppress("DEPRECATION")
             pm.queryIntentActivities(intent, PackageManager.MATCH_ALL).map {
-                TvApp(it.loadLabel(pm).toString(), it.activityInfo.packageName)
+                TvApp(it.loadLabel(pm).toString(), it.activityInfo.packageName, it.activityInfo.name)
             }
         }.filter { it.packageName != context.packageName }
             .distinctBy { it.packageName }
@@ -103,7 +103,7 @@ private fun SasTvHome() {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         items(shown, key = { it.packageName }) { app ->
                             AppTile(app, focused == app.packageName, { focused = app.packageName }) {
-                                context.packageManager.getLaunchIntentForPackage(app.packageName)?.let(context::startActivity)
+                                Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setClassName(app.packageName, app.className).let(context::startActivity)
                             }
                         }
                     }
