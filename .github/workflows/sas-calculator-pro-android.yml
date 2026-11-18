@@ -1,0 +1,32 @@
+name: Build SAS Calculator PRO APK
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'sas-calculator-pro/**'
+      - '.github/workflows/sas-calculator-pro-android.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sas-calculator-pro
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build debug APK
+        run: gradle --no-daemon assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SAS-Calculator-PRO-APK
+          path: sas-calculator-pro/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
