@@ -242,6 +242,10 @@ private val currencyUnits = listOf(
 @Composable
 fun CurrencyScreen() {
     var amount by remember { mutableStateOf("100") }
+    var display by remember { mutableStateOf("100") }
+    var left by remember { mutableStateOf<Double?>(null) }
+    var op by remember { mutableStateOf("") }
+    var fresh by remember { mutableStateOf(false) }
     var from by remember { mutableStateOf("SAR") }
     var to by remember { mutableStateOf("USD") }
     var rate by remember { mutableStateOf<Double?>(null) }
@@ -258,9 +262,7 @@ fun CurrencyScreen() {
             status = "جارٍ تحديث سعر الصرف..."
             try {
                 val data = withContext(Dispatchers.IO) {
-                    val request = Request.Builder()
-                        .url("https://open.er-api.com/v6/latest/$from")
-                        .build()
+                    val request = Request.Builder().url("https://open.er-api.com/v6/latest/$from").build()
                     OkHttpClient().newCall(request).execute().use { response ->
                         if (!response.isSuccessful) error("HTTP ${response.code}")
                         JSONObject(response.body?.string() ?: "{}")
@@ -268,88 +270,95 @@ fun CurrencyScreen() {
                 }
                 if (data.optString("result") != "success") error("Rate unavailable")
                 rate = data.getJSONObject("rates").getDouble(to)
-                status = "سعر صرف مرجعي مباشر"
+                status = "سعر صرف مرجعي محدث"
                 updated = data.optString("time_last_update_utc", "")
             } catch (e: Exception) {
                 rate = null
-                status = "تعذر جلب السعر. تحقق من الإنترنت وحاول التحديث."
+                status = "تعذر جلب السعر؛ تحقق من الإنترنت."
                 updated = ""
             }
         }
     }
 
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("تحويل العملات", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        Text("حوّل بين العملات بأسعار صرف محدثة", color = Color.Gray, fontSize = 13.sp)
-        Spacer(Modifier.height(22.dp))
+    val converted = rate?.let { (amount.toDoubleOrNull() ?: 0.0) * it }
+    val keys = listOf(listOf("AC", "⌫", "%", "÷"), listOf("7", "8", "9", "×"), listOf("4", "5", "6", "−"), listOf("1", "2", "3", "+"), listOf("0", ".", "+/-", "="))
+    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("الآلة الحاسبة SAS", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+        Text("حاسبة وتحويل عملات في شاشة واحدة", color = Color.Gray, fontSize = 12.sp)
+        Spacer(Modifier.height(10.dp))
 
-        Card(
-            Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = card),
-            shape = RoundedCornerShape(22.dp)
-        ) {
-            Column(Modifier.padding(16.dp)) {
-                Text("المبلغ", color = Color.LightGray, fontSize = 14.sp)
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = { amount = it.filter { ch -> ch.isDigit() || ch == '.' }.take(16) },
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = LocalTextStyle.current.copy(color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.SemiBold),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                    placeholder = { Text("أدخل المبلغ") },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = orange,
-                        unfocusedBorderColor = Color.DarkGray,
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        cursorColor = orange
-                    )
-                )
-                Spacer(Modifier.height(18.dp))
-                Text("من", color = Color.LightGray, fontSize = 13.sp)
-                CurrencyPicker(from) { from = it }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                    Button(
-                        onClick = { val old = from; from = to; to = old },
-                        colors = ButtonDefaults.buttonColors(containerColor = orange),
-                        shape = CircleShape
-                    ) {
-                        Text("⇅  تبديل العملتين", color = Color.Black, fontWeight = FontWeight.Bold)
+        // Split currency display: source and converted currency remain visible together.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Card(Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = card), shape = RoundedCornerShape(18.dp)) {
+                Column(Modifier.fillMaxWidth().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("من", color = Color.Gray, fontSize = 12.sp)
+                    CurrencyPicker(from) { from = it }
+                    Text(amount, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                }
+            }
+            Card(Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = card), shape = RoundedCornerShape(18.dp)) {
+                Column(Modifier.fillMaxWidth().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("إلى", color = Color.Gray, fontSize = 12.sp)
+                    CurrencyPicker(to) { to = it }
+                    Text(converted?.let { number.format(it) } ?: "—", color = orange, fontSize = 24.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(status, color = Color.Gray, fontSize = 10.sp, modifier = Modifier.weight(1f), maxLines = 1)
+            TextButton(onClick = { val old = from; from = to; to = old; display = amount; fresh = true }) {
+                Text("⇄ تبديل", color = orange, fontSize = 12.sp)
+            }
+            TextButton(onClick = { refresh++ }) { Text("تحديث ↻", color = orange, fontSize = 12.sp) }
+        }
+        if (updated.isNotBlank()) Text("آخر تحديث: $updated", color = Color.DarkGray, fontSize = 9.sp, maxLines = 1)
+        Divider(color = Color(0xFF333333), modifier = Modifier.padding(vertical = 5.dp))
+        Text("الحاسبة", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        Text(display, Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), color = Color.White, fontSize = 34.sp, textAlign = TextAlign.End, maxLines = 1)
+        keys.forEach { row ->
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    row.forEach { key ->
+                        val keyColor = when (key) {
+                            "AC", "⌫", "%" , "+/-" -> pale
+                            "÷", "×", "−", "+", "=" -> orange
+                            else -> gray
+                        }
+                        Key(key, keyColor, Modifier.weight(1f)) {
+                            val n = display.toDoubleOrNull() ?: 0.0
+                            when (key) {
+                                "AC" -> { display = "0"; amount = "0"; left = null; op = ""; fresh = false }
+                                "⌫" -> { display = if (display.length > 1) display.dropLast(1) else "0"; amount = display }
+                                "%" -> { display = number.format(n / 100); amount = display; fresh = true }
+                                "+/-" -> { display = if (display.startsWith("-")) display.drop(1) else "-$display"; amount = display }
+                                "." -> { if (!display.contains(".")) display += "."; amount = display; fresh = false }
+                                "+", "−", "×", "÷" -> { left = n; op = key; fresh = true }
+                                "=" -> {
+                                    val a = left
+                                    if (a != null) {
+                                        val result = when (op) {
+                                            "+" -> a + n
+                                            "−" -> a - n
+                                            "×" -> a * n
+                                            else -> if (n == 0.0) Double.NaN else a / n
+                                        }
+                                        display = number.format(result)
+                                        amount = display
+                                        left = null; op = ""; fresh = true
+                                    }
+                                }
+                                else -> {
+                                    display = if (fresh || display == "0") key else display + key
+                                    amount = display
+                                    fresh = false
+                                }
+                            }
+                        }
                     }
                 }
-                Text("إلى", color = Color.LightGray, fontSize = 13.sp)
-                CurrencyPicker(to) { to = it }
             }
         }
-
-        Spacer(Modifier.height(18.dp))
-        Card(
-            Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF202020)),
-            shape = RoundedCornerShape(22.dp)
-        ) {
-            Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("النتيجة", color = Color.LightGray, fontSize = 15.sp)
-                Text(
-                    rate?.let { number.format((amount.toDoubleOrNull() ?: 0.0) * it) } ?: "—",
-                    color = orange,
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-                Text(to, color = Color.White, fontSize = 17.sp)
-                Spacer(Modifier.height(8.dp))
-                Text(status, color = Color.LightGray, fontSize = 12.sp, textAlign = TextAlign.Center)
-                if (updated.isNotBlank()) Text("آخر تحديث للمصدر: $updated", color = Color.Gray, fontSize = 10.sp, textAlign = TextAlign.Center)
-                TextButton(onClick = { refresh++ }) { Text("تحديث السعر ↻", color = orange) }
-            }
-        }
-        Spacer(Modifier.height(12.dp))
-        Text("الأسعار مرجعية وقد تختلف عن أسعار البنوك والصرافة.", color = Color.Gray, fontSize = 11.sp, textAlign = TextAlign.Center)
+        Text("الناتج المحوّل يتحدث تلقائياً مع كل إدخال.", color = Color.Gray, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
     }
 }
 
