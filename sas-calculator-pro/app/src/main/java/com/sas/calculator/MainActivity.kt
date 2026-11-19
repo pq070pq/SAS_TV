@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun App() {
-    var page by remember { mutableStateOf("calculator") }
+    var page by remember { mutableStateOf("currency") }
     var display by remember { mutableStateOf("0") }
     var left by remember { mutableStateOf<Double?>(null) }
     var op by remember { mutableStateOf("") }
@@ -60,19 +60,11 @@ fun App() {
 
     Surface(Modifier.fillMaxSize(), color = black) {
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("SAS", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    NavChip("الحاسبة", page == "calculator") { page = "calculator" }
-                    NavChip("تحويل", page == "currency") { page = "currency" }
-                    NavChip("المزيد", page == "more") { page = "more" }
-                }
+            Row(Modifier.fillMaxWidth().height(58.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(54.dp).clip(CircleShape).background(Color(0xFF242426)).clickable { page = if (page == "calculator") "currency" else "calculator" }, contentAlignment = Alignment.Center) { Text("▦", color = Color.White, fontSize = 30.sp) }
+                Box(Modifier.size(54.dp).clip(CircleShape).background(Color(0xFF242426)).clickable { page = "more" }, contentAlignment = Alignment.Center) { Text("◷", color = Color.White, fontSize = 32.sp) }
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
 
             when (page) {
                 "calculator" -> {
@@ -241,8 +233,8 @@ private val currencyUnits = listOf(
 
 @Composable
 fun CurrencyScreen() {
-    var amount by remember { mutableStateOf("100") }
-    var display by remember { mutableStateOf("100") }
+    var amount by remember { mutableStateOf("29") }
+    var display by remember { mutableStateOf("29") }
     var left by remember { mutableStateOf<Double?>(null) }
     var op by remember { mutableStateOf("") }
     var fresh by remember { mutableStateOf(false) }
@@ -250,115 +242,83 @@ fun CurrencyScreen() {
     var to by remember { mutableStateOf("USD") }
     var rate by remember { mutableStateOf<Double?>(null) }
     var status by remember { mutableStateOf("جارٍ تحميل سعر الصرف...") }
-    var updated by remember { mutableStateOf("") }
     var refresh by remember { mutableIntStateOf(0) }
-
     LaunchedEffect(from, to, refresh) {
-        if (from == to) {
-            rate = 1.0
-            status = "العملتان متطابقتان"
-            updated = ""
-        } else {
+        if (from == to) { rate = 1.0; status = "العملتان متطابقتان" }
+        else try {
             status = "جارٍ تحديث سعر الصرف..."
-            try {
-                val data = withContext(Dispatchers.IO) {
-                    val request = Request.Builder().url("https://open.er-api.com/v6/latest/$from").build()
-                    OkHttpClient().newCall(request).execute().use { response ->
-                        if (!response.isSuccessful) error("HTTP ${response.code}")
-                        JSONObject(response.body?.string() ?: "{}")
-                    }
+            val data = withContext(Dispatchers.IO) {
+                val request = Request.Builder().url("https://open.er-api.com/v6/latest/$from").build()
+                OkHttpClient().newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) error("HTTP " + response.code)
+                    JSONObject(response.body?.string() ?: "{}")
                 }
-                if (data.optString("result") != "success") error("Rate unavailable")
-                rate = data.getJSONObject("rates").getDouble(to)
-                status = "سعر صرف مرجعي محدث"
-                updated = data.optString("time_last_update_utc", "")
-            } catch (e: Exception) {
-                rate = null
-                status = "تعذر جلب السعر؛ تحقق من الإنترنت."
-                updated = ""
             }
-        }
+            if (data.optString("result") != "success") error("Rate unavailable")
+            rate = data.getJSONObject("rates").getDouble(to)
+            status = "سعر صرف مرجعي محدث"
+        } catch (e: Exception) { rate = null; status = "تعذر جلب السعر؛ تحقق من الإنترنت." }
     }
-
     val converted = rate?.let { (amount.toDoubleOrNull() ?: 0.0) * it }
-    val keys = listOf(listOf("AC", "⌫", "%", "÷"), listOf("7", "8", "9", "×"), listOf("4", "5", "6", "−"), listOf("1", "2", "3", "+"), listOf("0", ".", "+/-", "="))
+    val keys = listOf(listOf("⌫", "حذف", "%", "÷"), listOf("٧", "٨", "٩", "×"), listOf("٤", "٥", "٦", "−"), listOf("١", "٢", "٣", "+"), listOf("+/−", "٠", "٫", "="))
     Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("الآلة الحاسبة SAS", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Bold)
-        Text("حاسبة وتحويل عملات في شاشة واحدة", color = Color.Gray, fontSize = 12.sp)
-        Spacer(Modifier.height(10.dp))
-
-        // Split currency display: source and converted currency remain visible together.
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Card(Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = card), shape = RoundedCornerShape(18.dp)) {
-                Column(Modifier.fillMaxWidth().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("من", color = Color.Gray, fontSize = 12.sp)
-                    CurrencyPicker(from) { from = it }
-                    Text(amount, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Spacer(Modifier.weight(0.25f))
+        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("⇅", color = orange, fontSize = 30.sp, modifier = Modifier.clickable { val old = from; from = to; to = old })
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                    Text(amount, color = Color.White, fontSize = 48.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                    Spacer(Modifier.width(10.dp)); CurrencyPickerCompact(from) { from = it }
                 }
-            }
-            Card(Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = card), shape = RoundedCornerShape(18.dp)) {
-                Column(Modifier.fillMaxWidth().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("إلى", color = Color.Gray, fontSize = 12.sp)
-                    CurrencyPicker(to) { to = it }
-                    Text(converted?.let { number.format(it) } ?: "—", color = orange, fontSize = 24.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Divider(color = Color(0xFF292929), thickness = 1.dp, modifier = Modifier.padding(vertical = 8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                    Text(converted?.let { number.format(it) } ?: "—", color = Color(0xFF85858B), fontSize = 48.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                    Spacer(Modifier.width(10.dp)); CurrencyPickerCompact(to) { to = it }
                 }
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(status, color = Color.Gray, fontSize = 10.sp, modifier = Modifier.weight(1f), maxLines = 1)
-            TextButton(onClick = { val old = from; from = to; to = old; display = amount; fresh = true }) {
-                Text("⇄ تبديل", color = orange, fontSize = 12.sp)
-            }
-            TextButton(onClick = { refresh++ }) { Text("تحديث ↻", color = orange, fontSize = 12.sp) }
-        }
-        if (updated.isNotBlank()) Text("آخر تحديث: $updated", color = Color.DarkGray, fontSize = 9.sp, maxLines = 1)
-        Divider(color = Color(0xFF333333), modifier = Modifier.padding(vertical = 5.dp))
-        Text("الحاسبة", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-        Text(display, Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), color = Color.White, fontSize = 34.sp, textAlign = TextAlign.End, maxLines = 1)
+        Text(status, color = Color.DarkGray, fontSize = 9.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, maxLines = 1)
+        Spacer(Modifier.height(12.dp))
         keys.forEach { row ->
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     row.forEach { key ->
-                        val keyColor = when (key) {
-                            "AC", "⌫", "%" , "+/-" -> pale
-                            "÷", "×", "−", "+", "=" -> orange
-                            else -> gray
-                        }
-                        Key(key, keyColor, Modifier.weight(1f)) {
+                        val c = when (key) { "⌫", "حذف", "%" -> Color(0xFF666668); "÷", "×", "−", "+", "=" -> orange; else -> Color(0xFF29292B) }
+                        Box(Modifier.weight(1f).padding(vertical = 4.dp).aspectRatio(1f).clip(CircleShape).background(c).clickable {
                             val n = display.toDoubleOrNull() ?: 0.0
                             when (key) {
-                                "AC" -> { display = "0"; amount = "0"; left = null; op = ""; fresh = false }
                                 "⌫" -> { display = if (display.length > 1) display.dropLast(1) else "0"; amount = display }
+                                "حذف" -> { display = "0"; amount = "0"; left = null; op = ""; fresh = false }
                                 "%" -> { display = number.format(n / 100); amount = display; fresh = true }
-                                "+/-" -> { display = if (display.startsWith("-")) display.drop(1) else "-$display"; amount = display }
-                                "." -> { if (!display.contains(".")) display += "."; amount = display; fresh = false }
+                                "+/−" -> { display = if (display.startsWith("-")) display.drop(1) else "-$display"; amount = display }
+                                "٫" -> { if (!display.contains(".")) display += "."; amount = display; fresh = false }
                                 "+", "−", "×", "÷" -> { left = n; op = key; fresh = true }
-                                "=" -> {
-                                    val a = left
-                                    if (a != null) {
-                                        val result = when (op) {
-                                            "+" -> a + n
-                                            "−" -> a - n
-                                            "×" -> a * n
-                                            else -> if (n == 0.0) Double.NaN else a / n
-                                        }
-                                        display = number.format(result)
-                                        amount = display
-                                        left = null; op = ""; fresh = true
-                                    }
+                                "=" -> if (left != null) {
+                                    val result = when (op) { "+" -> left!! + n; "−" -> left!! - n; "×" -> left!! * n; else -> if (n == 0.0) Double.NaN else left!! / n }
+                                    display = number.format(result); amount = display; left = null; op = ""; fresh = true
                                 }
-                                else -> {
-                                    display = if (fresh || display == "0") key else display + key
-                                    amount = display
-                                    fresh = false
-                                }
+                                else -> { display = if (fresh || display == "0") key else display + key; amount = display; fresh = false }
                             }
-                        }
+                        }, contentAlignment = Alignment.Center) { Text(key, color = Color.White, fontSize = if (key == "حذف") 21.sp else 34.sp, fontWeight = FontWeight.Medium) }
                     }
                 }
             }
         }
-        Text("الناتج المحوّل يتحدث تلقائياً مع كل إدخال.", color = Color.Gray, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
+        Spacer(Modifier.weight(0.08f))
+    }
+}
+
+@Composable
+fun CurrencyPickerCompact(selected: String, onSelected: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val unit = currencyUnits.firstOrNull { it.code == selected }
+    Row(Modifier.clickable { expanded = true }, verticalAlignment = Alignment.CenterVertically) {
+        Text(unit?.name ?: selected, color = Color(0xFFB8B8BD), fontSize = 17.sp, maxLines = 1)
+        Text("  ↕", color = Color(0xFF77777D), fontSize = 20.sp)
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.heightIn(max = 420.dp).background(card)) {
+            currencyUnits.forEach { item -> DropdownMenuItem(text = { Text(item.name + " (" + item.code + ")", color = Color.White) }, onClick = { onSelected(item.code); expanded = false }) }
+        }
     }
 }
 
