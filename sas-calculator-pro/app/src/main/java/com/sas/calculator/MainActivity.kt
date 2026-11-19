@@ -407,3 +407,5 @@ fun basicEval(s: String): String {
     }
     return number.format(value)
 }
+
+fun String.toArabicDigits(): String = map { ch -> if (ch in '0'..'9') ('٠'.code + (ch.code - '0'.code)).toChar() else if (ch == '.') '٫' else ch }.joinToString("")
