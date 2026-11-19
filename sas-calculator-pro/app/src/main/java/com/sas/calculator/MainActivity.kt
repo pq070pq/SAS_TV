@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -273,14 +274,16 @@ fun CurrencyScreen() {
             Text("⇅", color = orange, fontSize = 30.sp, modifier = Modifier.clickable { val old = from; from = to; to = old })
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                    Text(shown(amount), color = Color.White, fontSize = 47.sp, fontWeight = FontWeight.Normal, maxLines = 1, letterSpacing = (-1).sp)
-                    Spacer(Modifier.width(10.dp)); CurrencyPickerCompact(from) { from = it }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { AmountValue(shown(amount), Color.White) }
+                    Spacer(Modifier.width(8.dp))
+                    Box(Modifier.fillMaxWidth(0.42f)) { CurrencyPickerCompact(from) { from = it } }
                 }
                 Divider(color = Color(0xFF292929), thickness = 1.dp, modifier = Modifier.padding(vertical = 8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                    Text(converted?.let { shown(number.format(it)) } ?: "—", color = Color(0xFF85858B), fontSize = 47.sp, fontWeight = FontWeight.Normal, maxLines = 1, letterSpacing = (-1).sp)
-                    Spacer(Modifier.width(10.dp)); CurrencyPickerCompact(to) { to = it }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { AmountValue(converted?.let { shown(number.format(it)) } ?: "—", Color(0xFF85858B)) }
+                    Spacer(Modifier.width(8.dp))
+                    Box(Modifier.fillMaxWidth(0.42f)) { CurrencyPickerCompact(to) { to = it } }
                 }
             }
         }
@@ -317,6 +320,17 @@ fun CurrencyScreen() {
             }
         }
         Spacer(Modifier.weight(0.08f))
+    }
+}
+
+@Composable
+fun AmountValue(value: String, color: Color) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val safeSize = (maxWidth.value * 1.45f / value.length.coerceAtLeast(1)).coerceIn(22f, 47f)
+        Text(text = value, modifier = Modifier.fillMaxWidth(), color = color,
+            fontSize = safeSize.sp, fontWeight = FontWeight.Normal, maxLines = 1,
+            softWrap = false, overflow = TextOverflow.Clip, textAlign = TextAlign.End,
+            letterSpacing = (-0.5).sp)
     }
 }
 
