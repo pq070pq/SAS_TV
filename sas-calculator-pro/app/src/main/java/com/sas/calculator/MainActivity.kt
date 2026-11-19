@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Backspace
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
@@ -60,9 +62,11 @@ fun App() {
 
     Surface(Modifier.fillMaxSize(), color = black) {
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
-            Row(Modifier.fillMaxWidth().height(58.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(54.dp).clip(CircleShape).background(Color(0xFF242426)).clickable { page = if (page == "calculator") "currency" else "calculator" }, contentAlignment = Alignment.Center) { Text("▦", color = Color.White, fontSize = 30.sp) }
-                Box(Modifier.size(54.dp).clip(CircleShape).background(Color(0xFF242426)).clickable { page = "more" }, contentAlignment = Alignment.Center) { Text("◷", color = Color.White, fontSize = 32.sp) }
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Row(Modifier.fillMaxWidth().height(58.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(54.dp).clip(CircleShape).background(Color(0xFF242426)).clickable { page = if (page == "calculator") "currency" else "calculator" }, contentAlignment = Alignment.Center) { Text("▦", color = Color.White, fontSize = 30.sp) }
+                    Box(Modifier.size(54.dp).clip(CircleShape).background(Color(0xFF242426)).clickable { page = "history" }, contentAlignment = Alignment.Center) { Text("◷", color = Color.White, fontSize = 32.sp) }
+                }
             }
             Spacer(Modifier.height(8.dp))
 
@@ -243,6 +247,7 @@ fun CurrencyScreen() {
     var rate by remember { mutableStateOf<Double?>(null) }
     var status by remember { mutableStateOf("جارٍ تحميل سعر الصرف...") }
     var refresh by remember { mutableIntStateOf(0) }
+    var arabicDigits by remember { mutableStateOf(true) }
     LaunchedEffect(from, to, refresh) {
         if (from == to) { rate = 1.0; status = "العملتان متطابقتان" }
         else try {
@@ -260,26 +265,29 @@ fun CurrencyScreen() {
         } catch (e: Exception) { rate = null; status = "تعذر جلب السعر؛ تحقق من الإنترنت." }
     }
     val converted = rate?.let { (amount.toDoubleOrNull() ?: 0.0) * it }
-    val keys = listOf(listOf("⌫", "حذف", "%", "÷"), listOf("٧", "٨", "٩", "×"), listOf("٤", "٥", "٦", "−"), listOf("١", "٢", "٣", "+"), listOf("+/−", "٠", "٫", "="))
+    val keys = listOf(listOf("⌫", "حذف", "%", "÷"), listOf("7", "8", "9", "×"), listOf("4", "5", "6", "−"), listOf("1", "2", "3", "+"), listOf("+/−", "0", ".", "="))
+    fun shown(value: String): String = if (arabicDigits) value.toArabicDigits() else value
     Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Spacer(Modifier.weight(0.25f))
+        Spacer(Modifier.weight(0.38f))
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("⇅", color = orange, fontSize = 30.sp, modifier = Modifier.clickable { val old = from; from = to; to = old })
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                    Text(amount, color = Color.White, fontSize = 48.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                    Text(shown(amount), color = Color.White, fontSize = 47.sp, fontWeight = FontWeight.Normal, maxLines = 1, letterSpacing = (-1).sp)
                     Spacer(Modifier.width(10.dp)); CurrencyPickerCompact(from) { from = it }
                 }
                 Divider(color = Color(0xFF292929), thickness = 1.dp, modifier = Modifier.padding(vertical = 8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                    Text(converted?.let { number.format(it) } ?: "—", color = Color(0xFF85858B), fontSize = 48.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                    Text(converted?.let { shown(number.format(it)) } ?: "—", color = Color(0xFF85858B), fontSize = 47.sp, fontWeight = FontWeight.Normal, maxLines = 1, letterSpacing = (-1).sp)
                     Spacer(Modifier.width(10.dp)); CurrencyPickerCompact(to) { to = it }
                 }
             }
         }
-        Text(status, color = Color.DarkGray, fontSize = 9.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, maxLines = 1)
-        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 10.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(if (arabicDigits) "الأرقام: ١٢٣" else "Digits: 123", color = Color(0xFF777777), fontSize = 11.sp, modifier = Modifier.clickable { arabicDigits = !arabicDigits }.padding(vertical = 4.dp))
+            Text(status, color = Color(0xFF555555), fontSize = 10.sp, maxLines = 1)
+        }
         keys.forEach { row ->
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -292,7 +300,7 @@ fun CurrencyScreen() {
                                 "حذف" -> { display = "0"; amount = "0"; left = null; op = ""; fresh = false }
                                 "%" -> { display = number.format(n / 100); amount = display; fresh = true }
                                 "+/−" -> { display = if (display.startsWith("-")) display.drop(1) else "-$display"; amount = display }
-                                "٫" -> { if (!display.contains(".")) display += "."; amount = display; fresh = false }
+                                "." -> { if (!display.contains(".")) display += "."; amount = display; fresh = false }
                                 "+", "−", "×", "÷" -> { left = n; op = key; fresh = true }
                                 "=" -> if (left != null) {
                                     val result = when (op) { "+" -> left!! + n; "−" -> left!! - n; "×" -> left!! * n; else -> if (n == 0.0) Double.NaN else left!! / n }
@@ -300,7 +308,10 @@ fun CurrencyScreen() {
                                 }
                                 else -> { display = if (fresh || display == "0") key else display + key; amount = display; fresh = false }
                             }
-                        }, contentAlignment = Alignment.Center) { Text(key, color = Color.White, fontSize = if (key == "حذف") 21.sp else 34.sp, fontWeight = FontWeight.Medium) }
+                        }, contentAlignment = Alignment.Center) {
+                            if (key == "⌫") Icon(Icons.Outlined.Backspace, contentDescription = "مسح رقم", tint = Color.White, modifier = Modifier.size(35.dp))
+                            else Text(if (key.length == 1 && key[0].isDigit()) shown(key) else if (key == ".") if (arabicDigits) "٫" else "." else key, color = Color.White, fontSize = if (key == "حذف") 22.sp else 34.sp, fontWeight = FontWeight.Medium)
+                        }
                     }
                 }
             }
@@ -315,7 +326,7 @@ fun CurrencyPickerCompact(selected: String, onSelected: (String) -> Unit) {
     val unit = currencyUnits.firstOrNull { it.code == selected }
     Row(Modifier.clickable { expanded = true }, verticalAlignment = Alignment.CenterVertically) {
         Text(unit?.name ?: selected, color = Color(0xFFB8B8BD), fontSize = 17.sp, maxLines = 1)
-        Text("  ↕", color = Color(0xFF77777D), fontSize = 20.sp)
+        Text("  ⌃⌄", color = Color(0xFF77777D), fontSize = 16.sp)
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.heightIn(max = 420.dp).background(card)) {
             currencyUnits.forEach { item -> DropdownMenuItem(text = { Text(item.name + " (" + item.code + ")", color = Color.White) }, onClick = { onSelected(item.code); expanded = false }) }
         }
